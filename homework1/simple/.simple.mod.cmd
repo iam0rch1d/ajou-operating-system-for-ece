@@ -1,1 +1,0 @@
-cmd_/home/iam0rch1d/ajou-operating-system-for-ece/homework1/simple/simple.mod := { echo  /home/iam0rch1d/ajou-operating-system-for-ece/homework1/simple/simple.o; echo; } > /home/iam0rch1d/ajou-operating-system-for-ece/homework1/simple/simple.mod
