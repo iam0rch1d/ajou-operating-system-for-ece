@@ -1,0 +1,1 @@
+cmd_/home/iam0rch1d/ajou-operating-system-for-ece/homework1/part1/process.mod := { echo  /home/iam0rch1d/ajou-operating-system-for-ece/homework1/part1/process.o; echo; } > /home/iam0rch1d/ajou-operating-system-for-ece/homework1/part1/process.mod
