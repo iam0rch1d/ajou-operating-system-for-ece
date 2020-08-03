@@ -708,7 +708,7 @@ void  OSIntExit (void)
 #endif
                     OSCtxSwCtr++;                          /* Keep track of the number of ctx switches */
 
-					fprintf(stderr, "%u\t%-10s%4u%4u\n", OSTime - 1, "Preempt", OSPrioCur, OSTCBHighRdy->OSTCBPrio);
+                    fprintf(stderr, "%u\t%-10s%4u%4u\n", OSTime - 1, "Preempt", OSPrioCur, OSTCBHighRdy->OSTCBPrio);
 
 #if OS_TASK_CREATE_EXT_EN > 0u
 #if defined(OS_TLS_TBL_SIZE) && (OS_TLS_TBL_SIZE > 0u)
@@ -974,7 +974,7 @@ void  OSTimeTick (void)
                 ptcb->OSTCBDly--;                          /* Decrement nbr of ticks to end of delay       */
                 if (ptcb->OSTCBDly == 0u) {                /* Check for timeout                            */
 
-					ptcb->OSTCBDeadline += ptcb->OSTCBPeriod;
+                    ptcb->OSTCBDeadline += ptcb->OSTCBPeriod;
 
                     if ((ptcb->OSTCBStat & OS_STAT_PEND_ANY) != OS_STAT_RDY) {
                         ptcb->OSTCBStat  &= (INT8U)~(INT8U)OS_STAT_PEND_ANY;          /* Yes, Clear status flag   */
@@ -1448,7 +1448,7 @@ static  void  OS_InitTaskIdle (void)
 #if OS_TASK_CREATE_EXT_EN > 0u
     #if OS_STK_GROWTH == 1u
 
-	INT16U args[] = { 0u, 0u };
+    INT16U args[] = { 0u, 0u };
 
     (void)OSTaskCreateExt(OS_TaskIdle,
                           (void *)0,                                 /* No arguments passed to OS_TaskIdle() */
@@ -1512,8 +1512,8 @@ static  void  OS_InitTaskStat (void)
 
 #if OS_TASK_CREATE_EXT_EN > 0u
     #if OS_STK_GROWTH == 1u
-	
-	INT16U args[] = { 0, 0 };
+    
+    INT16U args[] = { 0, 0 };
 
     (void)OSTaskCreateExt(OS_TaskStat,
                           (void *)0,                                   /* No args passed to OS_TaskStat()*/
@@ -1695,7 +1695,7 @@ void  OS_Sched (void)
 #endif
                 OSCtxSwCtr++;                          /* Increment context switch counter             */
 
-				fprintf(stderr, "%u\t%-10s%4u%4u\n", OSTime - 1, "Complete", OSPrioCur, OSTCBHighRdy->OSTCBPrio);
+                fprintf(stderr, "%u\t%-10s%4u%4u\n", OSTime - 1, "Complete", OSPrioCur, OSTCBHighRdy->OSTCBPrio);
 
 #if OS_TASK_CREATE_EXT_EN > 0u
 #if defined(OS_TLS_TBL_SIZE) && (OS_TLS_TBL_SIZE > 0u)
@@ -1729,28 +1729,29 @@ void  OS_Sched (void)
 
 static  void  OS_SchedNew (void)
 {
-	INT8U mostUrgentPriority = OS_LOWEST_PRIO;
+    INT8U mostUrgentPriority = OS_LOWEST_PRIO;
 
 #if Scheduling == EDF
-	INT32S mostUrgentDeadline = 0x7FFFFFFF;
+    INT32S mostUrgentDeadline = 0x7FFFFFFF;
 
     for (INT8U i = 0; i <= OS_LOWEST_PRIO - 1; i++) {
-        if ((OSTCBPrioTbl[i] != (OS_TCB *)0) && (OSTCBPrioTbl != OS_TCB_RESERVED)) {
-            OS_TCB *ptr_current = OSTCBPrioTbl[i];
-            // Task ready check
+        if (OSTCBPrioTbl[i] != (OS_TCB *) 0 && OSTCBPrioTbl != OS_TCB_RESERVED) {
+            OS_TCB *currentOsTcb = OSTCBPrioTbl[i]; // Task ready check
 
-            if (ptr_current->OSTCBDly == 0) {
-                if ((ptr_current->OSTCBDeadline <= (INT32S)OSTime) && (ptr_current->OSTCBPrio != OS_LOWEST_PRIO)) {
-                    ptr_current->OSTCBDeadline += ptr_current->OSTCBPeriod;
-                    fprintf(stderr, "%u\t%-10s%4u\n", OSTime - 1, "Timeout", ptr_current->OSTCBPrio);
+            if (currentOsTcb->OSTCBDly == 0) {
+                // Timeout processing
+                if (currentOsTcb->OSTCBDeadline <= (INT32S)OSTime && currentOsTcb->OSTCBPrio != OS_LOWEST_PRIO) {
+                    currentOsTcb->OSTCBDeadline += currentOsTcb->OSTCBPeriod;
+
+                    fprintf(stderr, "%u\t%-10s%4u\n", OSTime - 1, "Timeout", currentOsTcb->OSTCBPrio);
+
                     continue;
                 }
-                // Timeout processing
-
-                if (ptr_current->OSTCBDeadline < mostUrgentDeadline) {
-                    mostUrgentPriority = ptr_current->OSTCBPrio;
-                    mostUrgentDeadline = ptr_current->OSTCBDeadline;
+                
+                if (currentOsTcb->OSTCBDeadline < mostUrgentDeadline) {
                     // Select a task with the closest deadline
+                    mostUrgentPriority = currentOsTcb->OSTCBPrio;
+                    mostUrgentDeadline = currentOsTcb->OSTCBDeadline;
                 }
             }
         }
@@ -1762,22 +1763,23 @@ static  void  OS_SchedNew (void)
     INT32S mostUrgentPeriod = 0x7FFFFFFF;
 
     for (INT8U i = 0; i <= OS_LOWEST_PRIO - 1; i++) {
-        if ((OSTCBPrioTbl[i] != (OS_TCB *)0) && (OSTCBPrioTbl != OS_TCB_RESERVED)) {
-            OS_TCB *ptr_current = OSTCBPrioTbl[i];
-            // Task ready check
+        if (OSTCBPrioTbl[i] != (OS_TCB *) 0 && OSTCBPrioTbl != OS_TCB_RESERVED) {
+            OS_TCB *currentOsTcb = OSTCBPrioTbl[i]; // Task ready check
 
-            if (ptr_current->OSTCBDly == 0) {
-                if ((ptr_current->OSTCBDeadline <= (INT32S)OSTime) && (ptr_current->OSTCBPrio != OS_LOWEST_PRIO)) {
-                    ptr_current->OSTCBDeadline += ptr_current->OSTCBPeriod;
-                    fprintf(stderr, "%u\t%-10s%4u\n", OSTime - 1, "Timeout", ptr_current->OSTCBPrio);
+            if (currentOsTcb->OSTCBDly == 0) {
+                // Timeout processing
+                if ((currentOsTcb->OSTCBDeadline <= (INT32S)OSTime) && (currentOsTcb->OSTCBPrio != OS_LOWEST_PRIO)) {
+                    currentOsTcb->OSTCBDeadline += currentOsTcb->OSTCBPeriod;
+
+                    fprintf(stderr, "%u\t%-10s%4u\n", OSTime - 1, "Timeout", currentOsTcb->OSTCBPrio);
+
                     continue;
                 }
-                // Timeout processing
-
-                if (ptr_current->OSTCBDeadline < mostUrgentPeriod) {
-                    mostUrgentPriority = ptr_current->OSTCBPrio;
-                    mostUrgentPeriod = ptr_current->OSTCBPeriod;
+                
+                if (currentOsTcb->OSTCBDeadline < mostUrgentPeriod) {
                     // Select a task with the closest period
+                    mostUrgentPriority = currentOsTcb->OSTCBPrio;
+                    mostUrgentPeriod = currentOsTcb->OSTCBPeriod;
                 }
             }
         }
@@ -2054,12 +2056,12 @@ INT8U  OS_TCBInit (INT8U    prio,
         ptcb->OSTCBOpt           = opt;                    /* Store task options                       */
         ptcb->OSTCBId            = id;                     /* Store task ID                            */
 
-		INT32S *p = (INT32S *)pext;
+        INT32S *p = (INT32S *)pext;
         ptcb->OSTCBPeriod = p[DEADLINE];
         ptcb->OSTCBDeadline = p[DEADLINE];
         ptcb->OSTCBProcessingTime = p[COMP_TIME];
         ptcb->OSTCBTotalProcessingTime = p[COMP_TIME];
-		ptcb->OSTCBDly = p[RELEASE_TIME];
+        ptcb->OSTCBDly = p[RELEASE_TIME];
 
 #else
         pext                     = pext;                   /* Prevent compiler warning if not used     */

@@ -67,9 +67,9 @@ static CPU_STK stack12[APP_TASK_STK_SIZE];
 
 
 INT32S limits[][3] = {
-		{ 0,  0, 0}, // Priority 0
-		{25, 50, 0}, // Priority 1
-		{35, 80, 0}, // Priority 2
+        {  0,  0, 0 }, // Priority 0
+        { 25, 50, 0 }, // Priority 1
+        { 35, 80, 0 }, // Priority 2
 };
 
 /*
@@ -98,27 +98,27 @@ int  main (void)
 {
 
     OSInit();                                                   /* Init uC/OS-II.                                       */
-	CPU_Init();
+    CPU_Init();
 
-	OSTaskCreateExt(periodicTask,
-		(void *)limits[1],
-		stack1 + (APP_TASK_STK_SIZE - 1),
-		(INT8U)(1),
-		(INT16U)(1),
-		stack1,
-		(INT32U)APP_TASK_STK_SIZE,
-		(void *)limits[1],
-		(INT16U)(OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR));
+    OSTaskCreateExt(periodicTask,
+        (void *)limits[1],
+        stack1 + (APP_TASK_STK_SIZE - 1),
+        (INT8U)(1),
+        (INT16U)(1),
+        stack1,
+        (INT32U)APP_TASK_STK_SIZE,
+        (void *)limits[1],
+        (INT16U)(OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR));
 
-	OSTaskCreateExt(periodicTask,
-		(void *)limits[2],
-		stack2 + (APP_TASK_STK_SIZE - 1),
-		(INT8U)(2),
-		(INT16U)(2),
-		stack2,
-		(INT32U)APP_TASK_STK_SIZE,
-		(void *)limits[2],
-		(INT16U)(OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR));
+    OSTaskCreateExt(periodicTask,
+        (void *)limits[2],
+        stack2 + (APP_TASK_STK_SIZE - 1),
+        (INT8U)(2),
+        (INT16U)(2),
+        stack2,
+        (INT32U)APP_TASK_STK_SIZE,
+        (void *)limits[2],
+        (INT16U)(OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR));
 
     OSStart();                                                  /* Start multitasking (i.e. give control to uC/OS-II).  */
 }
@@ -140,24 +140,21 @@ int  main (void)
 *********************************************************************************************************
 */
 
-static void periodicTask(void *p_arg)
-{
-	INT32S *p = (INT32S *)p_arg;
+static void periodicTask(void *p_arg) {
+    INT32S *p = (INT32S *)p_arg;
+    INT32S start = 0;
+    INT32S end;
+    INT32S toDelay;
 
-	INT32S start;
-	INT32S end;
-	INT32S toDelay;
-	start = 0;
+    while (1) {
+        while (OSTCBCur->OSTCBProcessingTime > 0);
 
-	while (1)
-	{
-		while (OSTCBCur->OSTCBProcessingTime > 0);
-
-		end = OSTimeGet();
-		toDelay = OSTCBCur->OSTCBPeriod - (end - start) % OSTCBCur->OSTCBPeriod;
-		toDelay = toDelay < 0 ? 0 : toDelay;
-		start += (OSTCBCur->OSTCBPeriod);
-		OSTCBCur->OSTCBProcessingTime = OSTCBCur->OSTCBTotalProcessingTime;
-		OSTimeDly(toDelay);
-	}
+        end = OSTimeGet();
+        toDelay = OSTCBCur->OSTCBPeriod - (end - start) % OSTCBCur->OSTCBPeriod;
+        toDelay = toDelay < 0 ? 0 : toDelay;
+        start += (OSTCBCur->OSTCBPeriod);
+        OSTCBCur->OSTCBProcessingTime = OSTCBCur->OSTCBTotalProcessingTime;
+        
+        OSTimeDly(toDelay);
+    }
 }
