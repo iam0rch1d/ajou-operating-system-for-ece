@@ -5,197 +5,186 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#define MAX_CHARACTER_SIZE 80 
+#define MAX_CHAR_SIZE 80 
 
 int fetchInputString(char *bufferString) {
-	char charBuffer;
-	int countChar = 0;
+    char buffer;
+    int countChar = 0;
 
-	while (((charBuffer = getchar()) != '\n') && (countChar < MAX_CHARACTER_SIZE + 1)) {
-	 	bufferString[countChar] = charBuffer;
-		countChar++;
-	}
+    while (((buffer = getchar()) != '\n') && countChar < MAX_CHAR_SIZE + 1) {
+     	bufferString[countChar++] = buffer;
+    }
 
-	if (charBuffer != '\n' && countChar == MAX_CHARACTER_SIZE) {
-	 	printf("ERROR: Command length exceeds maximum\n");
+    if (buffer != '\n' && countChar == MAX_CHAR_SIZE) {
+ 	printf("ERROR: Command length exceeds maximum\n");
 
-		return -1;
-	} else {
-	 	bufferString[countChar] = 0;
-	}
+    	return -1;
+    } else {
+     	bufferString[countChar] = 0;
+    }
 
-	return countChar;
+    return countChar;
 }
 
-void printHistory(char history[5][MAX_CHARACTER_SIZE + 1], int countHistory) {
+void printHistory(char history[5][MAX_CHAR_SIZE + 1], int countHistory) {
     int i;
     int j;
 
- 	if (countHistory == 0) {
-	 	printf("ERROR: No history exists\n");
+    if (!countHistory) {
+     	printf("ERROR: No history exists\n");
 
-		return;
-	}
+    	return;
+    }
 
-	for (i = countHistory, j = 5; i > 0 && j > 0; i--, j--) {
-		printf("%5d %s\n", i, history[i % 5]);
-	}
+    for (i = countHistory, j = 5; i > 0 && j > 0; i--, j--) {
+    	printf("%5d %s\n", i, history[i % 5]);
+    }
 }
 
-int parseArgument(char *buffer, int length, char **argument) {
- 	int countArgument = 0;
+int parseArgument(char *bufferString, int length, char **argumentString) {
+    int countArgument = 0;
     int indexPreargumentLastChar = -1;
     int i;
 
-	argument[0] = NULL;
+    argumentString[0] = NULL;
 	
-	for (i = 0; i <= length; ++i) {
-		if (buffer[i] && !isspace(buffer[i])) {
-			continue;
+    for (i = 0; i <= length; i++) {
+    	if (bufferString[i] && !isspace(bufferString[i])) {
+	    continue;
+	} else {
+	    if (indexPreargumentLastChar != i - 1) {
+		argumentString[countArgument] = (char *) malloc(sizeof(char) * (i - indexPreargumentLastChar));
+
+		if (argumentString[countArgument] == NULL) {
+		    printf("ERROR: Failed to allocate memory\n");
+
+		    return 1;
 		}
-		else {
-			if (indexPreargumentLastChar != i - 1) {
-				argument[countArgument] = (char *) malloc(sizeof(char) * (i - indexPreargumentLastChar));
 
-				if (argument[countArgument] == NULL) {
-					printf("ERROR: Failed to allocate memory\n");
+		memcpy(argumentString[countArgument],
+		    &bufferString[indexPreargumentLastChar + 1],
+		    i - indexPreargumentLastChar - 1
+		);
 
-					return 1;
-				}
-	
-				memcpy(argument[countArgument],
-                    &buffer[indexPreargumentLastChar + 1],
-                    i - indexPreargumentLastChar - 1
-                );
+		argumentString[countArgument++][i - indexPreargumentLastChar] = 0;
+		argumentString[countArgument] = NULL;
+	    }
 
-				argument[countArgument][i - indexPreargumentLastChar] = 0;
-				argument[countArgument] = NULL;
-                countArgument++;
-			}
-
-			indexPreargumentLastChar = i;
-		}
+	    indexPreargumentLastChar = i;
 	}
+    }
 
-	return countArgument;
+    return countArgument;
 }
 
-int createChildProcess(char **argument, int isBackgroundProcess) {
-	pid_t pid;
-    int child;
-	
-	pid = fork();
+int createChildProcess(char **argumentString, int isBackgroundProcess) {
+    pid_t pid;
 
-	if (pid < 0) {
-		printf("ERROR: Failed to create process\n");
+    pid = fork();
 
-		return 1;
+    if (pid < 0) {
+	printf("ERROR: Failed to create process\n");
+
+	return 1;
+    }
+
+    int childPid;
+
+    if (pid == 0) {
+	childPid = execvp(argumentString[0], argumentString);
+
+	if (childPid == -1) {
+	    printf("ERROR: Failed to execute the command\n");
 	}
-	
-	if (pid == 0) {
-		child = execvp(argument[0], argument);
 
-		if (child == -1) {
-			printf("ERROR: Failed to execute the command\n");
-		}
-
-		return 0;
-	} else {
-		if (isBackgroundProcess == 0) {
-			wait(&child);
-		}
+	return 0;
+    } else {
+	if (isBackgroundProcess == 0) {
+	    wait(&childPid);
 	}
+    }
 }
 
 int main(void) {
-    int shouldRun = 1;
-    int length;
-    char buffer[MAX_CHARACTER_SIZE + 1];
+    char bufferString[MAX_CHAR_SIZE + 1];
     int countHistory = 0;
-    char history[5][MAX_CHARACTER_SIZE + 1];
+    char historyString[5][MAX_CHAR_SIZE + 1];
     int countArgument;
-	char *argument[MAX_CHARACTER_SIZE/2 + 1];
+    char *argumentString[MAX_CHAR_SIZE / 2 + 1];
 
-	memset(buffer, 0, sizeof(buffer));
+    memset(bufferString, 0, sizeof(bufferString));
 
-	while (shouldRun) {
+    while (1) {
         printf("simple-shell> ");
-		fflush(stdout);
+	fflush(stdout);
 		
-		length = fetchInputString(buffer);
+	int bufferStringLength = fetchInputString(bufferString);
 
-		if (length == -1) {
-			continue;
-		}
+	if (bufferStringLength == -1) {
+	    continue;
+	}
 
-		if (!strcmp(buffer, "!!")) {
-			if (!(countHistory > 0)) {
-				printf("ERROR: No command exists in History");
+	if (strcmp(bufferString, "!!") == 0) {
+	    if (countHistory == 0) {
+		printf("ERROR: No command exists in history\n");
 
-				continue;
-			}
+		continue;
+	    }
 			
-			memcpy(buffer, history[countHistory % 5], MAX_CHARACTER_SIZE + 1);
+	    memcpy(bufferString, historyString[countHistory % 5], MAX_CHAR_SIZE + 1);
 
-			length = strlen(buffer);
-		}
+	    bufferStringLength = strlen(bufferString);
+	}
 		
-		countArgument = parseArgument(buffer, length, argument);
+	countArgument = parseArgument(bufferString, bufferStringLength, argumentString);
 
-		if (!countArgument) {
-			continue;
-		}
+	if (countArgument == 0) {
+	    continue;
+	}
 
-		if (argument[0][0] == '!') {
-			int historyTargetNumber = atoi(&argument[0][1]);
+	if (argumentString[0][0] == '!') {
+	    int historyTargetNumber = atoi(&argumentString[0][1]);
 
-			if (!(historyTargetNumber > 0
-            && historyTargetNumber >= countHistory - 4
-            && historyTargetNumber <= countHistory)
+	    if (historyTargetNumber <= 0
+	    || historyTargetNumber < countHistory - 4
+	    || historyTargetNumber > countHistory
             ) {
-				printf("ERROR: No such command exists in history\n");
+		printf("ERROR: No such command exists in history\n");
                 
-				continue;
-			}
-			
-			countHistory++;
+		continue;
+	    }
 
-			memcpy(buffer, history[historyTargetNumber % 5], MAX_CHARACTER_SIZE + 1);
+	    countHistory++;
 
-			length = strlen(buffer);
-			countArgument = parseArgument(buffer, length, argument); 
-		}
+	    memcpy(bufferString, historyString[historyTargetNumber % 5], MAX_CHAR_SIZE + 1);
 
-		if (!strcmp(argument[0], "exit")) {
-			shouldRun = 0;
+	    bufferStringLength = strlen(bufferString);
+	    countArgument = parseArgument(bufferString, bufferStringLength, argumentString); 
+	}
 
-			continue;
-		}
+	if (strcmp(argumentString[0], "exit") == 0) {
+	    return 0;
+	}
 
-		if (!strcmp(argument[0], "history")) {
-			printHistory(history, countHistory);
+	if (strcmp(argumentString[0], "history") == 0) {
+	    printHistory(historyString, countHistory);
 
-			countHistory++;
+	    memcpy(historyString[++countHistory % 5], bufferString, MAX_CHAR_SIZE + 1);
 
-			memcpy(history[countHistory % 5], buffer, MAX_CHARACTER_SIZE + 1);
-			
             continue;
-		}
+	}
 
-		countHistory++;
+	memcpy(historyString[++countHistory % 5], bufferString, MAX_CHAR_SIZE + 1);
 
-		memcpy(history[countHistory % 5], buffer, MAX_CHARACTER_SIZE + 1);
+	int isBackgroundProcess = 0;
 
-		int isBackgroundProcess = 0;
+	if (strcmp(argumentString[countArgument - 1], "&") == 0) {
+	    isBackgroundProcess = 1;
+	    argumentString[countArgument-- - 1] = NULL;
+	}
 
-		if (!strcmp(argument[countArgument - 1], "&")) {
-			isBackgroundProcess = 1;
-			argument[countArgument - 1] = NULL;
-			countArgument--;
-		}
-
-		createChildProcess(argument, isBackgroundProcess);
+	createChildProcess(argumentString, isBackgroundProcess);
     }
 
-	return 0;
+    return 0;
 }
