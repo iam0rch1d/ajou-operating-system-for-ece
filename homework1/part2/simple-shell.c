@@ -148,7 +148,7 @@ int main(void) {
             if (historyTargetNumber <= 0
                 || historyTargetNumber < countHistory - 4
                 || historyTargetNumber > countHistory
-                    ) {
+            ) {
                 printf("ERROR: No such command exists in history\n");
 
                 continue;
@@ -180,7 +180,7 @@ int main(void) {
 
         if (strcmp(argumentString[countArgument - 1], "&") == 0) {
             isBackgroundProcess = 1;
-            argumentString[countArgument - 1] = NULL;
+            argumentString[countArgument-- - 1] = NULL;
         }
 
         createChildProcess(argumentString, isBackgroundProcess);
