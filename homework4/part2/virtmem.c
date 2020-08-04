@@ -1,5 +1,5 @@
 /**
- * virtmem.c 
+ * virtmem.c
  * Written by Junyeong Yoon 201723300
  */
 
@@ -25,55 +25,55 @@
 #define BUFFER_SIZE 10
 
 // Type definitions
-struct tlbentry {
-    unsigned char page_num;
-    unsigned char frame_num;
+struct TlbEntry {
+    unsigned char pageNo;
+    unsigned char frameNo;
 };
 
 // Global variables
 
 // TLB is kept track of as a circular array, with the oldest element being overwritten once the TLB is full
-struct tlbentry tlb[TLB_SIZE];
+struct TlbEntry tlb[TLB_SIZE];
 
 // Number of inserts into TLB that have been completed.
-// Use as tlbindex % TLB_SIZE for the index of the next TLB line to use
-int tlbindex = 0;
+// Use as tlbIndex % TLB_SIZE for the index of the next TLB line to use
+int tlbIndex = 0;
 
 // pagetable[logical_page] is the physical page number for logical page.
 // Value is -1 if that logical page isn't yet in the table
 int pagetable[PAGES];
 
-signed char *backing; // Pointer to memory mapped backing file
+signed char *backingStore; // Pointer to memory mapped backing file
 
 // Function prototypes
-int check_tlb(int page_num);
-void add_to_tlb(int page_num, int frame_num);
-int check_pagetable(int page_num);
-void add_to_pagetable(int page_num, int frame_num);
+int checkPageInTlb(int pageNo);
+void addToTlb(int pageNo, int frameNo);
+int checkPagetable(int pageNo);
+void addToPagetable(int pageNo, int frameNo);
 
 int main(int argc, const char *argv[]) {
     if (argc != 3) {
-        fprintf(stderr, "Usage ./virtmem <backingstore> <input>\n");
+        fprintf(stderr, "Usage: ./virtmem <backing store> <virtual address vector>\n");
         exit(1);
     }
 
     // Load backing store data(*.bin)
-    const char *backing_filename = argv[1]; 
-    int backing_fd = open(backing_filename, O_RDONLY);
+    const char *backingStoreFileName = argv[1];
+    int backingStoreFileDescriptor = open(backingStoreFileName, O_RDONLY);
 
-    // Access backing store as memory through "backing" pointer
-    backing = mmap(0, MEMORY_SIZE, PROT_READ, MAP_PRIVATE, backing_fd, 0); 
-    
-    // Load virtual address list data (*.txt file)
-    const char *input_filename = argv[2];
-    FILE *input_fp = fopen(input_filename, "r");
-    
+    // Access backing store as memory through [backingStore] pointer
+    backingStore = mmap(0, MEMORY_SIZE, PROT_READ, MAP_PRIVATE, backing_fd, 0);
+
+    // Load virtual address vector data(*.txt)
+    const char *virtualAddressVectorFileName = argv[2];
+    FILE *file = fopen(virtualAddressVectorFileName, "r");
+
     // Fill all elements of the TLB entries with -1 for initially empty table
     int i;
 
     for (i = 0; i < TLB_SIZE; i++) {
-        tlb[i].page_num = -1;
-        tlb[i].frame_num = -1;
+        tlb[i].pageNo = -1;
+        tlb[i].frameNo = -1;
     }
 
     // Fill page table entries with -1 for initially empty table
@@ -85,22 +85,22 @@ int main(int argc, const char *argv[]) {
     char buffer[BUFFER_SIZE];
 
     // Data that is needed to keep track of to compute stats at end
-    int total_addresses = 0;
-    int total_frames = 0;
-    int total_tlb = 0;
-    int tlb_hits = 0;
-    int page_faults = 0;
+    int numAddress = 0;
+    int numFrame = 0;
+    int numTlb = 0;
+    int countTlbHit = 0;
+    int countPageFault = 0;
 
     // Number of the next unallocated physical page in main memory
     unsigned char free_page = 0;
 
     // Address translation data
-    int logical_address;
-    int physical_address;
+    int logicalAddress;
+    int physicalAddress;
 
     // Reference page number and frame number
-    int page_num;
-    int frame_num;
+    int pageNo;
+    int frameNo;
     int offset;
     signed char value;
 
@@ -108,58 +108,57 @@ int main(int argc, const char *argv[]) {
     printf("| Logical address | Physical address | Value |\n");
     printf("|-----------------+------------------+-------|\n");
 
-    while (fgets(buffer, BUFFER_SIZE, input_fp) != NULL) {
-        total_addresses++;
-        logical_address = atoi(buffer);
-        page_num = (logical_address >> PAGE_BITS) & PAGE_MASK;
-        offset = logical_address & OFFSET_MASK;
-        frame_num = check_tlb(page_num);
-        
+    while (fgets(buffer, BUFFER_SIZE, file) != NULL) {
+        numAddress++;
+        logicalAddress = atoi(buffer);
+        pageNo = (logicalAddress >> PAGE_BITS) & PAGE_MASK;
+        offset = logicalAddress & OFFSET_MASK;
+        frameNo = checkPageInTlb(pageNo);
+
         // If the page was not found from the TLB
-        if (frame_num == -1) {
-            frame_num = check_pagetable(page_num);
-            
+        if (frameNo == -1) {
+            frameNo = checkPagetable(pageNo);
+
             // If the page was not brought into memory(page fault)
-            if (frame_num == -1) {
-                total_frames++;
-                frame_num = total_frames % PAGES;
+            if (frameNo == -1) {
+                numFrame++;
+                frameNo = numFrame % PAGES;
 
-                add_to_pagetable(page_num, frame_num);
+                addToPagetable(pageNo, frameNo);
 
-                page_faults++;
+                countPageFault++;
             }
 
-            add_to_tlb(page_num, frame_num);
+            addToTlb(pageNo, frameNo);
+        } else {
+            countTlbHit++;
         }
-        else {
-            tlb_hits++;
-        }
-        
-        // Translate the frame into the physical address
-        physical_address = (frame_num << OFFSET_BITS) + offset;
-        
-        // Get the value
-        value = backing[frame_num];
 
-        printf("| %15d | %16d | %5d |\n", logical_address, physical_address, value);
+        // Translate the frame into the physical address
+        physicalAddress = (frameNo << OFFSET_BITS) + offset;
+
+        // Get the value
+        value = backingStore[frameNo];
+
+        printf("| %15d | %16d | %5d |\n", logicalAddress, physicalAddress, value);
     }
 
     printf("----------------------------------------------\n\n");
-    printf("Number of translated addresses = %d\n", total_addresses);
-    printf("Page faults = %d\n", page_faults);
-    printf("Page fault rate = %.3f\n", page_faults / (1. * total_addresses));
-    printf("TLB hits = %d\n", tlb_hits);
-    printf("TLB hit rate = %.3f\n", tlb_hits / (1. * total_addresses));
+    printf("Number of translated addresses = %d\n", numAddress);
+    printf("Page faults = %d\n", countPageFault);
+    printf("Page fault rate = %.3f\n", countPageFault / (1. * numAddress));
+    printf("TLB hits = %d\n", countTlbHit);
+    printf("TLB hit rate = %.3f\n", countTlbHit / (1. * numAddress));
 
     return 0;
 }
 
-// Check if the page is in the TLB
-int check_tlb(int page_num) {
+// Get the frame number of the page in the TLB, return -1 if the page is not in the tlb
+int checkPageInTlb(int pageNo) {
     int i;
     for (i = 0; i < TLB_SIZE; i++) {
-        if (tlb[i].page_num == page_num) {
-            return tlb[i].frame_num;
+        if (tlb[i].pageNo == pageNo) {
+            return tlb[i].frameNo;
         }
     }
 
@@ -167,18 +166,18 @@ int check_tlb(int page_num) {
 }
 
 // Add "tlb" node to the TLB
-void add_to_tlb(int page_num, int frame_num) {
-    tlb[tlbindex].page_num = page_num;
-    tlb[tlbindex].frame_num = frame_num;
-    tlbindex = (tlbindex + 1) % TLB_SIZE;
+void addToTlb(int pageNo, int frameNo) {
+    tlb[tlbIndex].pageNo = pageNo;
+    tlb[tlbIndex].frameNo = frameNo;
+    tlbIndex = (tlbIndex + 1) % TLB_SIZE;
 }
 
 // Get the frame at given page number, return -1 if the page is empty
-int check_pagetable(int page_num) {
-    return pagetable[page_num];
+int checkPagetable(int pageNo) {
+    return pagetable[pageNo];
 }
 
-// Add "pagetable" node the the page table
-void add_to_pagetable(int page_num, int frame_num) {
-    pagetable[page_num] = frame_num;
+// Add "pagetable" node the page table
+void addToPagetable(int pageNo, int frameNo) {
+    pagetable[pageNo] = frameNo;
 }
