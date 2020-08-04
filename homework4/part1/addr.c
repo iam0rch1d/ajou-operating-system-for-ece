@@ -18,7 +18,7 @@
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        fprintf(stderr,"Usage: ./a.out <virtual address>\n");
+        fprintf(stderr,"Usage: ./addr <virtual address>\n");
         
         return -1;
     }
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     unsigned int reference = (unsigned int) atoi(argv[1]);
     int page_size = 0x1 << PAGE_SIZE_POWEROF2;
     int page_num = reference / page_size;
-    int offset = = reference % page_size;
+    int offset = reference % page_size;
     
     printf("The address %d contains:\n", reference);
     printf("page number = %d\n", page_num);
