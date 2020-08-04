@@ -23,13 +23,13 @@ int main(int argc, char *argv[]) {
         return -1;
     }
     
-    unsigned int reference = (unsigned int) atoi(argv[1]);
-    int page_size = 0x1 << PAGE_SIZE_POWEROF2;
-    int page_num = reference / page_size;
-    int offset = reference % page_size;
+    unsigned int referenceAddress = (unsigned int) atoi(argv[1]);
+    int pageSize = 0x1 << PAGE_SIZE_POWEROF2;
+    int pageNo = referenceAddress / pageSize;
+    int offset = referenceAddress % pageSize;
     
-    printf("The address %d contains:\n", reference);
-    printf("page number = %d\n", page_num);
+    printf("The address %d contains:\n", referenceAddress);
+    printf("page number = %d\n", pageNo);
     printf("offset = %d\n", offset);
 
     return 0;
