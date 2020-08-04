@@ -62,7 +62,7 @@ int main(int argc, const char *argv[]) {
     int backingStoreFileDescriptor = open(backingStoreFileName, O_RDONLY);
 
     // Access backing store as memory through [backingStore] pointer
-    backingStore = mmap(0, MEMORY_SIZE, PROT_READ, MAP_PRIVATE, backing_fd, 0);
+    backingStore = mmap(0, MEMORY_SIZE, PROT_READ, MAP_PRIVATE, backingStoreFileDescriptor, 0);
 
     // Load virtual address vector data(*.txt)
     const char *virtualAddressVectorFileName = argv[2];
